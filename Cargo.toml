@@ -1,0 +1,11 @@
+[package]
+name = "RustPulse"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+reqwest = { version = "0.11", default-features = false, features = ["json", "rustls-tls-webpki-roots"] }
+tokio = { version = "1", features = ["full"] }
+time = { version = "0.3", features =["macros"] }
+colored_text = "0.5.1"
+regex = "1.10"
