@@ -71,7 +71,7 @@ jobs:
           if [[ "${{ matrix.target }}" == *"windows"* ]]; then
             EXTENSION=".exe"
           fi
-
+          tree
           cp "target/${{ matrix.target }}/release/${{ matrix.binary }}" \
              "dist/rustpulse-${{ matrix.name }}${EXTENSION}"
 
