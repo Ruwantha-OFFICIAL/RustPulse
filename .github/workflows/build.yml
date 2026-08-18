@@ -57,6 +57,7 @@ jobs:
           [target.aarch64-unknown-linux-gnu]
           linker = "aarch64-linux-gnu-gcc"
           EOF
+
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
 
@@ -64,14 +65,23 @@ jobs:
         shell: bash
         run: |
           mkdir -p dist
-          # Copy the binary with proper naming
-          cp "target/${{ matrix.target }}/release/${{ matrix.binary }}" \
-             "dist/rustpulse-${{ matrix.name }}"
+          SRC="target/${{ matrix.target }}/release/${{ matrix.binary }}"
+          DEST="dist/rustpulse-${{ matrix.name }}"
+          
+          # Check if binary exists before copying to avoid vague cp errors
+          if [ -f "$SRC" ]; then
+            cp "$SRC" "$DEST"
+            echo "Successfully copied $SRC to $DEST"
+          else
+            echo "Error: Binary not found at $SRC"
+            exit 1
+          fi
+
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: rustpulse-${{ matrix.name }}
-          path: dist/*
+          path: dist/rustpulse-${{ matrix.name }}
 
   release:
     name: Create GitHub Release
@@ -99,12 +109,12 @@ jobs:
             ## Linux
             ```bash
             chmod +x rustpulse-linux-amd64
-            ./rustpulse-linux-amd64 -url https://google.com/ -count 50
+            ./rustpulse-linux-amd64 -url [https://google.com/](https://google.com/) -count 50
             ```
 
             ## Windows
             ```powershell
-            .\rustpulse-windows-amd64.exe -url https://google.com/ -count 50
+            .\rustpulse-windows-amd64.exe -url [https://google.com/](https://google.com/) -count 50
             ```
             
             ## Other Setups
