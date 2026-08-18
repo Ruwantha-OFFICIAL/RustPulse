@@ -19,23 +19,19 @@ jobs:
         include:
           - name: linux-amd64
             os: ubuntu-latest
-            target: x86_64-unknown-linux-musl
-            binary: rustpulse
+            target: x86_64-unknown-linux-gnu
 
           - name: linux-arm64
             os: ubuntu-latest
-            target: aarch64-unknown-linux-musl
-            binary: rustpulse
+            target: aarch64-unknown-linux-gnu
 
           - name: windows-amd64
             os: windows-latest
             target: x86_64-pc-windows-msvc
-            binary: rustpulse.exe
 
           - name: windows-arm64
             os: windows-latest
             target: aarch64-pc-windows-msvc
-            binary: rustpulse.exe
 
     steps:
       - name: Checkout
@@ -46,12 +42,18 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
-      # Setup musl for static linking
-      - name: Setup Musl Tools
-        if: contains(matrix.target, 'musl')
+      # Cross compiler for Linux ARM64
+      - name: Setup Linux ARM64
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
         run: |
           sudo apt-get update
-          sudo apt-get install -y musl-tools
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+
+          mkdir -p .cargo
+          cat > .cargo/config.toml <<'EOF'
+          [target.aarch64-unknown-linux-gnu]
+          linker = "aarch64-linux-gnu-gcc"
+          EOF
 
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
@@ -61,14 +63,19 @@ jobs:
         run: |
           mkdir -p dist
 
-          # Determine output filename based on platform
+          # Determine source binary extension based on target
+          BINARY_NAME="rustpulse"
+          if [[ "${{ matrix.target }}" == *"windows"* ]]; then
+            BINARY_NAME="${BINARY_NAME}.exe"
+          fi
+
           OUTPUT_NAME="rustpulse-${{ matrix.name }}"
           if [[ "${{ matrix.target }}" == *"windows"* ]]; then
             OUTPUT_NAME="${OUTPUT_NAME}.exe"
           fi
 
           # Copy the binary with proper naming
-          cp "target/${{ matrix.target }}/release/${{ matrix.binary }}" \
+          cp "target/${{ matrix.target }}/release/${BINARY_NAME}" \
              "dist/${OUTPUT_NAME}"
 
       - name: Upload Artifact
@@ -94,5 +101,24 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: dist/*
+          body: |
+            # RustPulse Installation Guide
+            
+            **1.** Download the binary for your platform below.
+            **2.** Give it execution permissions and run it.
+
+            ## Linux
+            ```bash
+            chmod +x rustpulse-linux-amd64
+            ./rustpulse-linux-amd64 -url https://google.com/ -count 50
+            ```
+
+            ## Windows
+            ```powershell
+            .\rustpulse-windows-amd64.exe -url https://google.com/ -count 50
+            ```
+            
+            ## Other Setups
+            For macOS, Android (Termux), or manual source builds, please clone the repository and build using Cargo.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
