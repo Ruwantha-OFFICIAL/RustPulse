@@ -19,12 +19,12 @@ jobs:
         include:
           - name: linux-amd64
             os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
+            target: x86_64-unknown-linux-musl
             binary: rustpulse
 
           - name: linux-arm64
             os: ubuntu-latest
-            target: aarch64-unknown-linux-gnu
+            target: aarch64-unknown-linux-musl
             binary: rustpulse
 
           - name: windows-amd64
@@ -46,18 +46,12 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
-      # Cross compiler for Linux ARM64
-      - name: Setup Linux ARM64
-        if: matrix.target == 'aarch64-unknown-linux-gnu'
+      # Setup musl for static linking
+      - name: Setup Musl Tools
+        if: contains(matrix.target, 'musl')
         run: |
           sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu
-
-          mkdir -p .cargo
-          cat > .cargo/config.toml <<'EOF'
-          [target.aarch64-unknown-linux-gnu]
-          linker = "aarch64-linux-gnu-gcc"
-          EOF
+          sudo apt-get install -y musl-tools
 
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
@@ -67,9 +61,15 @@ jobs:
         run: |
           mkdir -p dist
 
+          # Determine output filename based on platform
+          OUTPUT_NAME="rustpulse-${{ matrix.name }}"
+          if [[ "${{ matrix.target }}" == *"windows"* ]]; then
+            OUTPUT_NAME="${OUTPUT_NAME}.exe"
+          fi
+
           # Copy the binary with proper naming
           cp "target/${{ matrix.target }}/release/${{ matrix.binary }}" \
-             "dist/rustpulse-${{ matrix.name }}"
+             "dist/${OUTPUT_NAME}"
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
